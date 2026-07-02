@@ -3,19 +3,15 @@
 // Static address pool + multi-API failover polling + anti-cheat validation.
 // ============================================================================
 
-// WALLET ADDRESS SHIELDING — dummy placeholder invoice targets picked at random.
+// WALLET ADDRESS SHIELDING — LIVE PRODUCTION invoice targets picked at random.
 export const SECURE_ADDRESS_POOL = {
   LTC: [
-    "ltc1qk8f3s9x0v2m7r4t6y8u1a3d5g7j9l2n4p6q8s0",
-    "ltc1qw9e2r4t6y8u0i1o3p5a7s9d1f3g5h7j9k1l3z5",
-    "ltc1q2s4d6f8g0h2j4k6l8z0x2c4v6b8n0m2q4w6e8r",
-    "ltc1qa1s2d3f4g5h6j7k8l9z0x1c2v3b4n5m6q7w8e9",
+    // Live Production Litecoin Target Key
+    "ltc1qlgwkgw7fl5g7xsueh3ajd4rsvjvhrwc0yhnu6y",
   ],
   XMR: [
-    "48daf1rK7Xy2Qm9Zp3Lb6Vn8Tc0Ws4Ej5Ru7Yi1Oa3Sd5Fg7Hj9Kl2Zx4Cv6Bn8Mq0We2Rt4Y",
-    "89ghKl3Mn5Pq7Rs9Tu1Vw3Xy5Za7Bc9De1Fg3Hi5Jk7Lm9No1Pq3Rs5Tu7Vw9Xy1Za3Bc5De7F",
-    "44mNbVcXz2As4Df6Gh8Jk0Lp2Qw4Er6Ty8Ui0Op2As4Df6Gh8Jk0Lp2Qw4Er6Ty8Ui0Op2As4D",
-    "4Bpq9Rs7Tu5Vw3Xy1Za9Bc7De5Fg3Hi1Jk9Lm7No5Pq3Rs1Tu9Vw7Xy5Za3Bc1De9Fg7Hi5Jk3",
+    // Live Production Shielded Monero Target Key
+    "85bRMtwUP27EHtrSFrVKSUX1p1PcwHeAnc9Nfj3F6EvQc4rhrqT4VfqgTEDVZiJF5aEuM7X9y5pjuE81eEKF8kUG1FABnKB",
   ],
 };
 
