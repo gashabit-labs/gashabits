@@ -37,10 +37,6 @@ const EXPLORERS = [
     name: "Blockstream",
     build: (addr) => `https://blockstream.info/api/address/${addr}/txs`,
   },
-  {
-    name: "SoChain",
-    build: (addr, coin) => `https://sochain.com/api/v2/address/${coin === "XMR" ? "LTC" : "LTC"}/${addr}`,
-  },
 ];
 
 // Attempt one polling sweep with failover. Returns { found, tx, explorer } or null.

@@ -138,7 +138,7 @@ export const InvoicePanel = ({
               <div key={i} className="inv-log-line">&gt; {l}</div>
             ))}
           </div>
-          <button type="button" className="inv-sim-btn" data-testid="simulate-payment-button" onClick={onSimulate}>
+          <button type="button" className="inv-sim-btn" data-testid="force-verify-button" onClick={onSimulate}>
             <Zap size={16} /> DEMO: Force Verified Broadcast
           </button>
         </div>
