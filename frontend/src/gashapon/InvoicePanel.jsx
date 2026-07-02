@@ -2,10 +2,11 @@ import React, { useEffect, useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { Copy, Check, Download, ShieldCheck, Loader2, Bitcoin, Coins, Zap } from "lucide-react";
 import { drawSpriteToCanvas } from "./spriteEngine";
+import { fetchUsdRate } from "./blockchain";
 
 const COIN_META = {
-  LTC: { label: "Insert LTC", sub: "Single Turn", price: "£0.10", uri: "litecoin", icon: Coins, tint: "#b8b8b8" },
-  XMR: { label: "Insert XMR", sub: "Multi-Token Roll", price: "£1.00", uri: "monero", icon: Bitcoin, tint: "#ff7b00" },
+  LTC: { label: "Insert LTC", sub: "Single Turn", price: "$0.15", priceUsd: 0.15, uri: "litecoin", icon: Coins, tint: "#b8b8b8" },
+  XMR: { label: "Insert XMR", sub: "Multi-Token Roll", price: "$1.50", priceUsd: 1.5, uri: "monero", icon: Bitcoin, tint: "#ff7b00" },
 };
 
 const CopyRow = ({ value }) => {
@@ -39,6 +40,28 @@ export const InvoicePanel = ({
   onReset,
 }) => {
   const canvasRef = useRef(null);
+  const [rate, setRate] = useState(null); // live USD ticker (CoinGecko → CryptoCompare)
+  const [cryptoAmount, setCryptoAmount] = useState(null);
+
+  // EXCHANGE API — fetch the live USD conversion ticker to price the QR invoice.
+  useEffect(() => {
+    if (machineState !== "INVOICE" || !coin) {
+      setRate(null);
+      setCryptoAmount(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const usd = await fetchUsdRate(coin); // LTC/USD or XMR/USD
+      if (cancelled) return;
+      setRate(usd);
+      const priceUsd = COIN_META[coin]?.priceUsd;
+      if (usd && priceUsd) setCryptoAmount((priceUsd / usd).toFixed(8));
+    })();
+    return () => { cancelled = true; };
+  }, [machineState, coin]);
+
+  const qrValue = `${COIN_META[coin]?.uri}:${address}${cryptoAmount ? `?amount=${cryptoAmount}` : ""}`;
 
   useEffect(() => {
     if (machineState === "REVEALED" && sprite && canvasRef.current) {
@@ -110,13 +133,18 @@ export const InvoicePanel = ({
           </p>
           <div className="inv-qr-wrap" data-testid="invoice-qr">
             <QRCodeCanvas
-              value={`${COIN_META[coin]?.uri}:${address}`}
+              value={qrValue}
               size={168}
               bgColor="#0e0512"
               fgColor="#ff6ac1"
               level="M"
               includeMargin
             />
+          </div>
+          <div className="inv-rate" data-testid="invoice-amount">
+            {cryptoAmount
+              ? <>≈ <b>{cryptoAmount} {coin}</b> @ ${rate?.toLocaleString()} / {coin}</>
+              : "Fetching live USD ticker…"}
           </div>
           <span className="inv-field-label">Leased {coin} address</span>
           <CopyRow value={address} />

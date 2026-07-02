@@ -136,6 +136,28 @@ export function buildSimulatedTx(leasedAddress) {
   };
 }
 
+// EXCHANGE API — live USD conversion ticker (CoinGecko primary, CryptoCompare fallback)
+export async function fetchUsdRate(coin) {
+  const id = coin === "XMR" ? "monero" : "litecoin";
+  const sym = coin === "XMR" ? "XMR" : "LTC";
+  try {
+    const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`);
+    if (r.ok) {
+      const d = await r.json();
+      const v = d?.[id]?.usd;
+      if (v) return v;
+    }
+  } catch { /* fall through to backup ticker */ }
+  try {
+    const r = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${sym}&tsyms=USD`);
+    if (r.ok) {
+      const d = await r.json();
+      if (d?.USD) return d.USD;
+    }
+  } catch { /* no ticker available */ }
+  return null;
+}
+
 export function randomHex(len) {
   const bytes = new Uint8Array(len / 2);
   (window.crypto || {}).getRandomValues?.(bytes);
