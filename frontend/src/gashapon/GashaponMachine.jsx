@@ -33,7 +33,7 @@ export const GashaponMachine = ({
     <div className="gash-stage" data-testid="gashapon-stage">
       <div className={`gash-cabinet ${shaking ? "gash-shake" : ""}`} data-testid="gashapon-cabinet">
         <div className="gash-topper" data-testid="machine-topper">
-          <span>CRYPTO&nbsp;GASHA</span>
+          <span>GASHABITS</span>
         </div>
 
         <div className="gash-globe" data-testid="machine-globe">

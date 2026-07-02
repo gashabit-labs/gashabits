@@ -33,6 +33,7 @@ function App() {
   );
 
   const pollRef = useRef(null);
+  const dispenseRef = useRef(false);
   const addLog = useCallback((line) => {
     setLogs((prev) => [...prev.slice(-8), `${new Date().toLocaleTimeString()} — ${line}`]);
   }, []);
@@ -79,6 +80,7 @@ function App() {
 
   const resetAll = () => {
     stopPolling();
+    dispenseRef.current = false;
     setMachineState("IDLE");
     setCoin(null);
     setAddress(null);
@@ -103,7 +105,15 @@ function App() {
     addLog("Broadcast window open — starting multi-explorer polling");
   };
 
-  // ANTI-CHEAT gatekeeper passed → arm the machine for the crank turn.
+  // STATE 3 — dispense: 1.2s shake + lever rotates 180° + capsule drops into tray.
+  const triggerDispense = () => {
+    if (dispenseRef.current) return;
+    dispenseRef.current = true;
+    setMachineState("DISPENSING");
+    setTimeout(() => setMachineState("DROPPED"), 1250);
+  };
+
+  // ANTI-CHEAT gatekeeper passed → seed engine (result stays HIDDEN) then dispense.
   const verifyAndArm = (tx) => {
     const check = validateTransaction(tx, address);
     if (!check.ok) {
@@ -112,10 +122,13 @@ function App() {
       return;
     }
     stopPolling();
+    dispenseRef.current = false;
     addLog(`VERIFIED ${tx.hash.slice(0, 16)}… — seeding art engine`);
-    setSprite(generateSprite(tx.hash));
+    setSprite(generateSprite(tx.hash)); // generated but hidden until the capsule is opened
     setMachineState("VERIFIED");
     setError("");
+    // Verification event strictly triggers the drop; the lever can also be pulled early.
+    setTimeout(triggerDispense, 1000);
   };
 
   // DEMO simulate — from INVOICE we first flash processing, then verify.
@@ -131,12 +144,9 @@ function App() {
     }
   };
 
-  // STATE 3 — user turns the crank → shake + lever rotate + capsule drop.
+  // STATE 3 — the crank accepts touch + mouse; pulling early triggers the same dispense.
   const handleLever = () => {
-    if (machineState !== "VERIFIED") return;
-    setMachineState("DISPENSING");
-    // 1.2s shake/vibration, then capsule sits in the tray.
-    setTimeout(() => setMachineState("DROPPED"), 1250);
+    if (machineState === "VERIFIED") triggerDispense();
   };
 
   // STATE 4 — click the dropped capsule to open + reveal.
@@ -155,8 +165,8 @@ function App() {
     <div className="gasha-app" data-testid="gasha-app">
       <div className="gasha-scanlines" aria-hidden />
       <header className="gasha-header">
-        <h1 className="gasha-h1" data-testid="app-title">CAPSULE&nbsp;CRYPT</h1>
-        <p className="gasha-tag">a zero-server pixel-loot vending machine</p>
+        <h1 className="gasha-h1" data-testid="app-title">GASHABITS</h1>
+        <p className="gasha-tag">The Traceless 8-Bit Vending Machine</p>
       </header>
 
       <main className="gasha-main" data-testid="gasha-layout">
@@ -187,7 +197,7 @@ function App() {
       </main>
 
       <footer className="gasha-footer" data-testid="app-footer">
-        No accounts · No database · Session flushes on tab close · Not real funds
+        GashaBits secure session - everything flushes when you close this tab.
       </footer>
     </div>
   );

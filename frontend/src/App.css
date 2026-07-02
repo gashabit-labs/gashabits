@@ -116,28 +116,36 @@
 
 .gash-cabinet {
     position: relative;
-    border-radius: 30px 30px 22px 22px;
-    padding: 18px 18px 22px;
-    background:
-        linear-gradient(180deg, #ff5470 0%, #e01e3c 40%, #b30f28 100%);
+    border-radius: 0;
+    padding: 16px 16px 20px;
+    background-color: #e01e3c;
+    /* dithering: alternating checker highlights, no smooth gradient */
+    background-image:
+        repeating-linear-gradient(45deg, rgba(255,255,255,0.14) 0 3px, transparent 3px 6px),
+        repeating-linear-gradient(-45deg, rgba(122,11,28,0.55) 0 3px, transparent 3px 6px);
+    image-rendering: pixelated;
+    /* chunky, jagged pixel border via stepped box-shadow */
     box-shadow:
-        inset 0 6px 0 rgba(255, 255, 255, 0.35),
-        inset 0 -10px 24px rgba(0, 0, 0, 0.45),
-        inset -8px 0 20px rgba(0, 0, 0, 0.3),
-        inset 8px 0 20px rgba(255, 255, 255, 0.12),
-        0 24px 50px rgba(0, 0, 0, 0.55),
-        0 0 0 4px #7a0b1c;
-    border: 3px solid #ffb3bf;
+        inset 0 0 0 3px #ff8a9c,
+        inset 0 0 0 6px #b30f28,
+        6px 0 0 0 #7a0b1c, -6px 0 0 0 #7a0b1c,
+        0 6px 0 0 #7a0b1c, 0 -6px 0 0 #7a0b1c,
+        0 20px 0 0 rgba(0,0,0,0.5),
+        12px 12px 0 0 rgba(0,0,0,0.4);
+    border: 0;
+    outline: 3px solid #2a0209;
 }
 
 .gash-topper {
     text-align: center;
-    background: linear-gradient(180deg, #ffe259, #ffa751);
-    border: 3px solid #7a0b1c;
-    border-radius: 14px;
-    padding: 10px 6px;
+    background-color: #ffcf3f;
+    background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.4) 0 2px, transparent 2px 4px);
+    border: 0;
+    border-radius: 0;
+    padding: 12px 6px;
     margin-bottom: 14px;
-    box-shadow: inset 0 3px 0 rgba(255,255,255,0.6), 0 3px 0 rgba(0,0,0,0.4);
+    image-rendering: pixelated;
+    box-shadow: inset 0 0 0 3px #ffe98a, inset 0 0 0 6px #a35a00, 0 4px 0 #7a0b1c, 0 8px 0 rgba(0,0,0,0.45);
 }
 .gash-topper span {
     font-family: "Press Start 2P", monospace;
@@ -151,37 +159,55 @@
     position: relative;
     width: 100%;
     aspect-ratio: 1 / 1;
-    border-radius: 50%;
+    border-radius: 46% / 46%;
     overflow: hidden;
-    background:
-        radial-gradient(circle at 34% 30%, rgba(255,255,255,0.55), rgba(255,255,255,0.05) 42%),
-        radial-gradient(circle at 50% 60%, rgba(180, 220, 255, 0.25), rgba(20, 6, 30, 0.5));
-    border: 5px solid #ffd9df;
+    background-color: #8fd3ff;
+    /* banded, hard-stop retro dome (no smooth gradient) + faint scan dither */
+    background-image:
+        repeating-conic-gradient(from 0deg, rgba(255,255,255,0.12) 0deg 6deg, transparent 6deg 12deg),
+        radial-gradient(circle at 38% 32%, #ffffff 0 8%, #d6f0ff 8% 22%, #8fd3ff 22% 55%, #4aa8e6 55% 100%);
+    image-rendering: pixelated;
     box-shadow:
-        inset 0 0 30px rgba(0,0,0,0.4),
-        inset 0 8px 20px rgba(255,255,255,0.5),
-        0 6px 0 rgba(0,0,0,0.3);
+        inset 0 0 0 4px #eafaff,
+        inset 0 0 0 8px #2a7fb8,
+        0 6px 0 rgba(0,0,0,0.4);
+    border: 0;
 }
 .gash-balls { position: absolute; inset: 6%; }
 .gash-ball {
     position: absolute;
-    width: 16%;
-    height: 16%;
-    border-radius: 50%;
-    box-shadow:
-        inset -2px -2px 4px rgba(0,0,0,0.35),
-        inset 3px 3px 5px rgba(255,255,255,0.6);
-    animation: ballFloat 4s ease-in-out infinite;
+    width: 15%;
+    height: 15%;
+    border-radius: 0;
+    /* chunky octagon silhouette = low-res pixel sphere */
+    clip-path: polygon(33% 0,67% 0,100% 33%,100% 67%,67% 100%,33% 100%,0 67%,0 33%);
+    box-shadow: inset 0 0 0 2px rgba(0,0,0,0.6);
+    image-rendering: pixelated;
+    animation: ballFloat 4s steps(2) infinite;
+}
+.gash-ball::before {
+    /* 1px-style white plastic sheen highlight */
+    content: "";
+    position: absolute;
+    top: 20%;
+    left: 22%;
+    width: 20%;
+    height: 20%;
+    background: #ffffff;
 }
 .gash-ball:nth-child(2n) { animation-duration: 5.2s; }
 .gash-ball:nth-child(3n) { animation-duration: 6.1s; animation-direction: reverse; }
 .gash-glass-shine {
     position: absolute;
-    top: 8%; left: 14%;
-    width: 40%; height: 26%;
-    border-radius: 50%;
-    background: linear-gradient(135deg, rgba(255,255,255,0.75), transparent);
-    filter: blur(2px);
+    top: 12%;
+    left: 16%;
+    width: 22%;
+    height: 10%;
+    border-radius: 0;
+    background: rgba(255,255,255,0.9);
+    box-shadow: -8px 10px 0 -2px rgba(255,255,255,0.6);
+    filter: none;
+    image-rendering: pixelated;
     pointer-events: none;
 }
 @keyframes ballFloat {
@@ -192,15 +218,17 @@
 /* body panel with coin slot + lever */
 .gash-body {
     position: relative;
-    margin-top: 14px;
-    background: linear-gradient(180deg, #2a0d14, #17070c);
-    border: 3px solid #7a0b1c;
-    border-radius: 16px;
+    margin-top: 16px;
+    background-color: #1a0509;
+    background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0 2px, transparent 2px 4px);
+    border: 0;
+    border-radius: 0;
     padding: 20px 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    box-shadow: inset 0 4px 10px rgba(0,0,0,0.7);
+    image-rendering: pixelated;
+    box-shadow: inset 0 0 0 3px #7a0b1c, inset 0 0 0 6px #2a0209;
 }
 .gash-coin-slot {
     display: flex;
@@ -209,12 +237,19 @@
     gap: 8px;
 }
 .gash-coin-line {
-    width: 46px;
-    height: 8px;
-    border-radius: 4px;
-    background: #05020a;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.9), 0 1px 0 rgba(255,255,255,0.15);
-    border: 2px solid #ffd9df;
+    width: 22px;
+    height: 42px;
+    border-radius: 0;
+    background-color: #05020a;
+    /* deep indented metal chute — heavy vertical pixel shading */
+    background-image: repeating-linear-gradient(90deg, #000 0 2px, #16161c 2px 4px, #33333f 4px 6px);
+    box-shadow:
+        inset 3px 0 0 rgba(255,255,255,0.15),
+        inset -3px 0 0 rgba(0,0,0,0.85),
+        0 0 0 3px #c9ccd1,
+        0 0 0 6px #2a0209;
+    border: 0;
+    image-rendering: pixelated;
 }
 .gash-slot-label {
     font-family: "Press Start 2P", monospace;
@@ -226,13 +261,18 @@
 /* crank lever */
 .gash-lever {
     position: relative;
-    width: 66px;
-    height: 66px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #f6f6f6, #9aa0a6 60%, #5a5f66);
-    border: 4px solid #c9ccd1;
-    box-shadow: inset 0 3px 6px rgba(255,255,255,0.7), inset 0 -4px 8px rgba(0,0,0,0.5), 0 4px 0 rgba(0,0,0,0.4);
-    transition: transform 0.7s cubic-bezier(0.68,-0.4,0.27,1.4), box-shadow 0.3s;
+    width: 62px;
+    height: 62px;
+    border-radius: 0;
+    /* pixel-drawn circular mechanical hand lever */
+    clip-path: polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%);
+    background-color: #b9bec4;
+    background-image:
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.25) 0 2px, transparent 2px 4px),
+        repeating-linear-gradient(90deg, rgba(0,0,0,0.16) 0 2px, transparent 2px 4px);
+    box-shadow: inset 0 0 0 3px #eef0f2, inset 0 0 0 6px #5a5f66;
+    image-rendering: pixelated;
+    transition: transform 0.7s steps(6), filter 0.3s;
     cursor: default;
 }
 .gash-lever.is-active {
@@ -241,22 +281,27 @@
 }
 .gash-lever.is-turned { transform: rotate(180deg); }
 .gash-lever-handle {
+    /* pixel T-bar crank arm */
     position: absolute;
     top: 50%; left: 50%;
-    width: 8px; height: 30px;
-    border-radius: 4px;
-    background: linear-gradient(180deg, #ffde59, #e01e3c);
+    width: 8px; height: 26px;
+    border-radius: 0;
+    background: #ffde59;
     transform: translate(-50%, -100%);
-    box-shadow: 0 0 4px rgba(0,0,0,0.5);
+    box-shadow:
+        0 -20px 0 0 #ffde59,
+        -10px -20px 0 0 #ffde59,
+        10px -20px 0 0 #ffde59,
+        0 0 0 2px #7a0b1c;
 }
 .gash-lever-dot {
     position: absolute;
     top: 50%; left: 50%;
-    width: 14px; height: 14px;
-    border-radius: 50%;
+    width: 12px; height: 12px;
+    border-radius: 0;
     background: #2a0d14;
     transform: translate(-50%, -50%);
-    box-shadow: inset 0 2px 3px rgba(0,0,0,0.8);
+    box-shadow: 0 0 0 2px #05020a;
 }
 .gash-lever-hint {
     position: absolute;
@@ -269,8 +314,8 @@
     animation: hintBounce 0.8s ease-in-out infinite;
 }
 @keyframes leverGlow {
-    0%,100% { box-shadow: inset 0 3px 6px rgba(255,255,255,0.7), inset 0 -4px 8px rgba(0,0,0,0.5), 0 4px 0 rgba(0,0,0,0.4), 0 0 0 rgba(126,249,255,0); }
-    50% { box-shadow: inset 0 3px 6px rgba(255,255,255,0.7), inset 0 -4px 8px rgba(0,0,0,0.5), 0 4px 0 rgba(0,0,0,0.4), 0 0 18px 4px rgba(126,249,255,0.85); }
+    0%,100% { filter: drop-shadow(0 0 0 rgba(126,249,255,0)); }
+    50% { filter: drop-shadow(0 0 8px rgba(126,249,255,0.95)); }
 }
 @keyframes hintBounce {
     0%,100% { transform: translateY(0); opacity: 1; }
@@ -302,7 +347,7 @@
 /* capsule */
 .gash-capsule {
     position: absolute;
-    left: 50%;
+    left: 30%;
     bottom: 12px;
     width: 58px;
     height: 58px;
@@ -322,15 +367,17 @@
 }
 .gash-capsule .gash-capsule-top {
     top: 0;
-    border-radius: 30px 30px 6px 6px;
-    background: radial-gradient(circle at 35% 30%, #9fe6ff, #22d3ee 70%);
-    box-shadow: inset 0 3px 6px rgba(255,255,255,0.7);
+    border-radius: 26px 26px 0 0;
+    background: #22d3ee;
+    box-shadow: inset 0 0 0 3px #0a6b7d, inset 7px 7px 0 -3px #baf1ff;
+    image-rendering: pixelated;
 }
 .gash-capsule .gash-capsule-bottom {
     bottom: 0;
-    border-radius: 6px 6px 30px 30px;
-    background: radial-gradient(circle at 35% 70%, #ffd1f0, #ff2d95 75%);
-    box-shadow: inset 0 -3px 6px rgba(0,0,0,0.4);
+    border-radius: 0 0 26px 26px;
+    background: #ff2d95;
+    box-shadow: inset 0 0 0 3px #8a0b47, inset 7px -7px 0 -3px #ffd1f0;
+    image-rendering: pixelated;
 }
 .gash-capsule.is-drop { animation: capsuleDrop 1s cubic-bezier(0.3, 0.8, 0.4, 1.2); }
 .gash-capsule.is-open .gash-capsule-top { animation: capTop 0.5s forwards; }
@@ -568,6 +615,46 @@
     animation: revealPop 0.5s cubic-bezier(0.2,0.8,0.3,1.4);
 }
 @keyframes revealPop { 0% { transform: scale(0.2) rotate(-10deg); opacity: 0;} 100% { transform: scale(1) rotate(0); opacity: 1;} }
+
+/* ANTI-SCREENSHOT SECURITY LAYER — DOM overlays on top of the canvas only */
+.canvas-guard {
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+    image-rendering: pixelated;
+}
+.wm-grid {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    /* fine dithered transparent-to-dark grid to obscure screen captures */
+    background-image:
+        repeating-linear-gradient(0deg, rgba(0,0,0,0.30) 0 1px, transparent 1px 4px),
+        repeating-linear-gradient(90deg, rgba(0,0,0,0.30) 0 1px, transparent 1px 4px),
+        repeating-linear-gradient(45deg, rgba(10,26,43,0.35) 0 2px, transparent 2px 5px);
+    mix-blend-mode: multiply;
+}
+.wm-text {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.wm-text span {
+    font-family: "Press Start 2P", monospace;
+    font-size: 1.6rem;
+    color: rgba(255,255,255,0.34);
+    text-shadow: 0 0 2px rgba(0,0,0,0.55);
+    transform: rotate(-24deg);
+    letter-spacing: 4px;
+    white-space: nowrap;
+    image-rendering: pixelated;
+}
 .inv-seed { font-size: 0.95rem; color: #7ef9ff; opacity: 0.7; word-break: break-all; text-align: center; }
 
 .inv-download {

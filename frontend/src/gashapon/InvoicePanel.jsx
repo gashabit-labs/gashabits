@@ -47,13 +47,16 @@ export const InvoicePanel = ({
   }, [machineState, sprite]);
 
   const handleDownload = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    canvas.toBlob((blob) => {
+    if (!sprite) return;
+    // CLEAN BLOB EXPORT: render the sprite onto a fresh offscreen canvas so the
+    // saved PNG is free of the on-screen watermark grid / UNMINTED overlay.
+    const clean = document.createElement("canvas");
+    drawSpriteToCanvas(clean, sprite, 16);
+    clean.toBlob((blob) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `gasha-${sprite?.category?.replace(/\s+/g, "-").toLowerCase() || "sprite"}-${(sprite?.hash || "").slice(0, 8)}.png`;
+      a.download = `gashabits-${sprite?.category?.replace(/\s+/g, "-").toLowerCase() || "sprite"}-${(sprite?.hash || "").slice(0, 8)}.png`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -156,7 +159,7 @@ export const InvoicePanel = ({
             <li><Check size={14} /> Rule 3 — destination address matched</li>
           </ul>
           <p className="inv-lead">
-            {machineState === "VERIFIED" && "Grab the crank on the machine and give it a turn →"}
+            {machineState === "VERIFIED" && "Verified! The machine is cranking — or pull the lever yourself →"}
             {machineState === "DISPENSING" && "Dispensing your capsule…"}
             {machineState === "DROPPED" && "A capsule dropped into the tray — tap it to crack it open!"}
           </p>
@@ -172,7 +175,15 @@ export const InvoicePanel = ({
           </div>
           <h3 className="inv-reveal-name" data-testid="sprite-label">{sprite.label}</h3>
           <div className="inv-canvas-wrap">
-            <canvas ref={canvasRef} className="inv-canvas" data-testid="sprite-canvas" />
+            {/* ANTI-SCREENSHOT: watermark grid + UNMINTED text are DOM overlays only,
+                never painted onto the canvas — so the downloaded blob stays clean. */}
+            <div className="canvas-guard" data-testid="canvas-guard">
+              <canvas ref={canvasRef} className="inv-canvas" data-testid="sprite-canvas" />
+              <div className="wm-grid" data-testid="watermark-grid" aria-hidden />
+              <div className="wm-text" data-testid="watermark-text" aria-hidden>
+                <span>UNMINTED</span>
+              </div>
+            </div>
           </div>
           <div className="inv-seed" data-testid="sprite-seed">seed: {sprite.hash.slice(0, 24)}…</div>
           <button type="button" className="inv-download" data-testid="download-sprite-button" onClick={handleDownload}>
