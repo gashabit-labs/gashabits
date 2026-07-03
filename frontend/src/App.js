@@ -11,6 +11,16 @@ import {
 
 const SESSION_KEY = "gasha_session_v1";
 
+// Rotate the hash so each pull in a bundle seeds a distinct (but deterministic) sprite.
+const rotateHex = (h, n) => {
+  const c = (h || "").replace(/^0x/, "");
+  if (!c) return c;
+  const k = ((n % c.length) + c.length) % c.length;
+  return c.slice(k) + c.slice(0, k);
+};
+const genPulls = (hash, count) =>
+  Array.from({ length: Math.max(1, count) }, (_, i) => generateSprite(rotateHex(hash, i * 11)));
+
 function loadSession() {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY);
@@ -27,9 +37,12 @@ function App() {
   const [address, setAddress] = useState(restored?.address || null);
   const [logs, setLogs] = useState([]);
   const [error, setError] = useState("");
-  const [sprite, setSprite] = useState(
-    restored?.hash ? generateSprite(restored.hash) : null
+  const [quantity, setQuantity] = useState(restored?.quantity || 1);
+  const [sprites, setSprites] = useState(
+    restored?.hash ? genPulls(restored.hash, restored?.quantity || 1) : []
   );
+  const [openedIdx, setOpenedIdx] = useState([]);
+  const [activeIdx, setActiveIdx] = useState(0);
 
   const pollRef = useRef(null);
   const dispenseRef = useRef(false);
@@ -47,11 +60,11 @@ function App() {
       sessionStorage.removeItem(SESSION_KEY);
       return;
     }
-    const snapshot = { machineState, coin, address, hash: sprite?.hash || null };
+    const snapshot = { machineState, coin, address, hash: sprites[0]?.hash || null, quantity };
     try {
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(snapshot));
     } catch { /* ignore */ }
-  }, [machineState, coin, address, sprite]);
+  }, [machineState, coin, address, sprites, quantity]);
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -105,16 +118,20 @@ function App() {
     setMachineState("IDLE");
     setCoin(null);
     setAddress(null);
-    setSprite(null);   // clears the cached tx hash from memory
+    setSprites([]);    // clears the cached tx hash + all pulls from memory
+    setQuantity(1);
+    setOpenedIdx([]);
+    setActiveIdx(0);
     setLogs([]);
     setError("");
     sessionStorage.removeItem(SESSION_KEY); // wipe the session cache entirely
   };
 
-  const handleInsert = (which) => {
+  const handleInsert = (which, qty = 1) => {
     setError("");
     armedRef.current = false;
     dispenseRef.current = false;
+    setQuantity(qty);
     const leased = leaseAddress(which);
     setCoin(which);
     setAddress(leased);
@@ -150,7 +167,9 @@ function App() {
     abortRef.current?.abort();
     dispenseRef.current = false;
     addLog(`VERIFIED ${tx.hash.slice(0, 16)}… — seeding art engine`);
-    setSprite(generateSprite(tx.hash)); // generated but hidden until the capsule is opened
+    setSprites(genPulls(tx.hash, quantity)); // N deterministic pulls, hidden until popped
+    setOpenedIdx([]);
+    setActiveIdx(0);
     setMachineState("VERIFIED");
     setError("");
     // Verification event strictly triggers the drop; the lever can also be pulled early.
@@ -162,17 +181,21 @@ function App() {
     if (machineState === "VERIFIED") triggerDispense();
   };
 
-  // STATE 4 — click the dropped capsule to open + reveal.
-  const handleCapsule = () => {
-    if (machineState !== "DROPPED") return;
+  // STATE 4 — click a dropped capsule to pop it open + reveal its sprite.
+  const handleCapsule = (index) => {
+    if (machineState !== "DROPPED" && machineState !== "REVEALED") return;
+    if (index == null || index < 0 || index >= sprites.length) return;
+    setOpenedIdx((prev) => (prev.includes(index) ? prev : [...prev, index]));
+    setActiveIdx(index);
     setMachineState("REVEALED");
   };
 
   const leverActive = machineState === "VERIFIED";
   const leverTurned = ["DISPENSING", "DROPPED", "REVEALED"].includes(machineState);
   const shaking = machineState === "DISPENSING";
-  const capsuleVisible = ["DROPPED", "REVEALED"].includes(machineState);
-  const capsuleOpened = machineState === "REVEALED";
+  const capsules = ["DROPPED", "REVEALED"].includes(machineState)
+    ? sprites.map((s, i) => ({ index: i, opened: openedIdx.includes(i) }))
+    : [];
 
   return (
     <div className="gasha-app" data-testid="gasha-app">
@@ -188,8 +211,7 @@ function App() {
             leverActive={leverActive}
             leverTurned={leverTurned}
             shaking={shaking}
-            capsuleVisible={capsuleVisible}
-            capsuleOpened={capsuleOpened}
+            capsules={capsules}
             onLever={handleLever}
             onCapsule={handleCapsule}
           />
@@ -201,8 +223,12 @@ function App() {
             address={address}
             logs={logs}
             error={error}
-            sprite={sprite}
+            sprites={sprites}
+            activeIdx={activeIdx}
+            openedIdx={openedIdx}
+            quantity={quantity}
             onInsert={handleInsert}
+            onSelectSprite={setActiveIdx}
             onReset={resetAll}
           />
         </div>

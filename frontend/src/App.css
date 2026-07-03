@@ -543,6 +543,56 @@
     animation: pulseDot 1.2s infinite;
 }
 .inv-log-mini { max-height: 84px; margin-top: 8px; font-size: 0.92rem; }
+
+/* --- LTC bundle selector + multi-pull reveal --- */
+.inv-bundle-card { cursor: default; }
+.inv-bundle-card::before { display: none; }
+.inv-qty { display: flex; gap: 10px; }
+.inv-qty-btn {
+    flex: 1;
+    padding: 14px 0;
+    font-family: "Press Start 2P", monospace;
+    font-size: 0.9rem;
+    color: #ffd9f2;
+    background: #0e0512;
+    border: 2px solid rgba(126,249,255,0.3);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.12s ease, border-color 0.2s, box-shadow 0.2s, color 0.2s;
+}
+.inv-qty-btn:hover { transform: translateY(-2px); border-color: #7ef9ff; }
+.inv-qty-btn.is-active {
+    color: #05020a;
+    background: #7ef9ff;
+    border-color: #7ef9ff;
+    box-shadow: 0 0 16px rgba(126,249,255,0.6);
+}
+.inv-insert-btn { width: 100%; }
+.inv-reveal-counter {
+    align-self: center;
+    font-family: "Press Start 2P", monospace;
+    font-size: 0.72rem;
+    color: #7cffb2;
+    text-shadow: 0 0 8px rgba(124,255,178,0.6);
+}
+.inv-thumbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+.inv-thumb {
+    padding: 6px;
+    background: #0e0512;
+    border: 2px solid rgba(126,249,255,0.3);
+    border-radius: 8px;
+    cursor: pointer;
+    line-height: 0;
+    transition: transform 0.12s ease, border-color 0.2s, box-shadow 0.2s;
+}
+.inv-thumb canvas { width: 54px; height: 54px; image-rendering: pixelated; display: block; }
+.inv-thumb:hover { transform: translateY(-2px); border-color: #7ef9ff; }
+.inv-thumb.is-active { border-color: #ffde59; box-shadow: 0 0 14px rgba(255,222,89,0.6); }
 .inv-copy {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     width: 100%;

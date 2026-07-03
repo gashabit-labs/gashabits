@@ -14,11 +14,17 @@ export const GashaponMachine = ({
   leverActive = false,
   leverTurned = false,
   shaking = false,
-  capsuleVisible = false,
-  capsuleOpened = false,
+  capsules = [],
   onLever,
   onCapsule,
 }) => {
+  const CAP_COLORS = [
+    ["#22d3ee", "#ff2d95"],
+    ["#ffde59", "#7c3aed"],
+    ["#4caf50", "#ff7b00"],
+    ["#4dabf7", "#e63946"],
+    ["#ff6ac1", "#22d3ee"],
+  ];
   const leverProps = leverActive
     ? {
         onMouseDown: onLever,
@@ -71,18 +77,25 @@ export const GashaponMachine = ({
 
         <div className="gash-tray" data-testid="machine-prize-slot">
           <div className="gash-tray-mouth" />
-          {capsuleVisible && (
-            <button
-              type="button"
-              className={`gash-capsule ${capsuleOpened ? "is-open" : "is-drop"}`}
-              data-testid="prize-capsule"
-              onClick={onCapsule}
-              aria-label="Open the dropped capsule"
-            >
-              <span className="gash-capsule-top" />
-              <span className="gash-capsule-bottom" />
-            </button>
-          )}
+          {capsules.map((c) => {
+            const [top, bottom] = CAP_COLORS[c.index % CAP_COLORS.length];
+            const leftPct = ((c.index + 1) / (capsules.length + 1)) * 100;
+            return (
+              <button
+                key={c.index}
+                type="button"
+                className={`gash-capsule ${c.opened ? "is-open" : "is-drop"}`}
+                style={{ left: `${leftPct}%` }}
+                data-testid={c.index === 0 ? "prize-capsule" : `prize-capsule-${c.index}`}
+                onClick={() => onCapsule?.(c.index)}
+                disabled={c.opened}
+                aria-label={`Open capsule ${c.index + 1}`}
+              >
+                <span className="gash-capsule-top" style={{ background: top }} />
+                <span className="gash-capsule-bottom" style={{ background: bottom }} />
+              </button>
+            );
+          })}
         </div>
       </div>
       <div className="gash-feet" />

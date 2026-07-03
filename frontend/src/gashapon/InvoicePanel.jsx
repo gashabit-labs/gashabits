@@ -27,17 +27,41 @@ const CopyRow = ({ value }) => {
   );
 };
 
+const SpriteThumb = ({ sprite, active, onClick, index }) => {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (ref.current) drawSpriteToCanvas(ref.current, sprite, 3);
+  }, [sprite]);
+  return (
+    <button
+      type="button"
+      className={`inv-thumb ${active ? "is-active" : ""}`}
+      data-testid={`sprite-thumb-${index}`}
+      onClick={onClick}
+      title={sprite.label}
+    >
+      <canvas ref={ref} />
+    </button>
+  );
+};
+
 export const InvoicePanel = ({
   machineState,
   coin,
   address,
   logs,
   error,
-  sprite,
+  sprites = [],
+  activeIdx = 0,
+  openedIdx = [],
+  quantity = 1,
   onInsert,
+  onSelectSprite,
   onReset,
 }) => {
   const canvasRef = useRef(null);
+  const [qty, setQty] = useState(1); // IDLE package selector (1–5 pulls)
+  const activeSprite = sprites[activeIdx] || null;
   const [rate, setRate] = useState(null); // live USD ticker (CoinGecko → CryptoCompare)
   const [cryptoAmount, setCryptoAmount] = useState(null);
 
@@ -50,34 +74,34 @@ export const InvoicePanel = ({
     }
     const controller = new AbortController();
     (async () => {
-      const usd = await fetchUsdRate(coin, controller.signal); // LTC/USD or XMR/USD
+      const usd = await fetchUsdRate(coin, controller.signal); // LTC/USD
       if (controller.signal.aborted) return;
       setRate(usd);
-      const priceUsd = COIN_META[coin]?.priceUsd;
+      const priceUsd = (COIN_META[coin]?.priceUsd || 0) * (quantity || 1);
       if (usd && priceUsd) setCryptoAmount((priceUsd / usd).toFixed(8));
     })();
     return () => controller.abort(); // kill the ticker fetch on reset/unmount
-  }, [machineState, coin]);
+  }, [machineState, coin, quantity]);
 
   const qrValue = `${COIN_META[coin]?.uri}:${address}${cryptoAmount ? `?amount=${cryptoAmount}` : ""}`;
 
   useEffect(() => {
-    if (machineState === "REVEALED" && sprite && canvasRef.current) {
-      drawSpriteToCanvas(canvasRef.current, sprite, 12);
+    if (machineState === "REVEALED" && activeSprite && canvasRef.current) {
+      drawSpriteToCanvas(canvasRef.current, activeSprite, 12);
     }
-  }, [machineState, sprite]);
+  }, [machineState, activeSprite]);
 
   const handleDownload = () => {
-    if (!sprite) return;
-    // CLEAN BLOB EXPORT: render the sprite onto a fresh offscreen canvas so the
-    // saved PNG is free of the on-screen watermark grid / UNMINTED overlay.
+    if (!activeSprite) return;
+    // CLEAN BLOB EXPORT: render onto a fresh offscreen canvas so the saved PNG
+    // is free of the on-screen watermark grid / UNMINTED overlay.
     const clean = document.createElement("canvas");
-    drawSpriteToCanvas(clean, sprite, 16);
+    drawSpriteToCanvas(clean, activeSprite, 16);
     clean.toBlob((blob) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `gashabits-${sprite?.category?.replace(/\s+/g, "-").toLowerCase() || "sprite"}-${(sprite?.hash || "").slice(0, 8)}.png`;
+      a.download = `gashabits-${activeSprite?.category?.replace(/\s+/g, "-").toLowerCase() || "sprite"}-${(activeSprite?.hash || "").slice(0, 8)}.png`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -92,31 +116,38 @@ export const InvoicePanel = ({
         <span className="inv-status-dot" data-state={machineState} />
       </header>
 
-      {/* STATE 1 — IDLE: coin buttons */}
+      {/* STATE 1 — IDLE: LTC bundle selector */}
       {machineState === "IDLE" && (
         <div className="inv-body" data-testid="state-idle">
-          <p className="inv-lead">Drop a coin to spin the vault. Zero accounts. Zero server. Pure client-side loot.</p>
-          <div className="inv-coins">
-            {Object.entries(COIN_META).map(([key, m]) => {
-              const Icon = m.icon;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  className={`inv-coin-btn coin-${key.toLowerCase()}`}
-                  data-testid={`insert-${key.toLowerCase()}-button`}
-                  onClick={() => onInsert(key)}
-                >
-                  <span className="inv-coin-top">
-                    <Icon size={20} />
-                    <b>{m.label}</b>
-                  </span>
-                  <span className="inv-coin-sub">{m.sub}</span>
-                  <span className="inv-coin-price">{m.price}</span>
-                </button>
-              );
-            })}
+          <p className="inv-lead">Pick your bundle and drop LTC to spin the vault. Zero accounts. Zero server. Pure client-side loot.</p>
+          <div className="inv-coin-btn coin-ltc inv-bundle-card">
+            <span className="inv-coin-top">
+              <Coins size={20} /> <b>Litecoin Pulls</b>
+            </span>
+            <span className="inv-coin-sub">$0.15 per capsule turn</span>
           </div>
+          <span className="inv-field-label">Choose package quantity</span>
+          <div className="inv-qty" data-testid="qty-selector">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                className={`inv-qty-btn ${qty === n ? "is-active" : ""}`}
+                data-testid={`qty-${n}`}
+                onClick={() => setQty(n)}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="inv-download inv-insert-btn"
+            data-testid="insert-ltc-button"
+            onClick={() => onInsert("LTC", qty)}
+          >
+            <Coins size={18} /> Insert LTC — ${(0.15 * qty).toFixed(2)} ({qty} pull{qty > 1 ? "s" : ""})
+          </button>
           <div className="inv-privacy">
             <ShieldCheck size={14} /> Traceless session — everything flushes when you close this tab.
           </div>
@@ -127,7 +158,7 @@ export const InvoicePanel = ({
       {machineState === "INVOICE" && (
         <div className="inv-body" data-testid="state-invoice">
           <p className="inv-lead">
-            Scan to pay <b>{COIN_META[coin]?.price}</b> in <b>{coin}</b>. A random leased address was pulled from the shielded pool.
+            Scan to pay <b>${totalUsd.toFixed(2)}</b> in <b>LTC</b> for <b>{quantity} pull{quantity > 1 ? "s" : ""}</b>. Address leased from the shielded pool.
           </p>
           <div className="inv-qr-wrap" data-testid="invoice-qr">
             <QRCodeCanvas
@@ -193,21 +224,24 @@ export const InvoicePanel = ({
             <li><Check size={14} /> Rule 3 — destination address matched</li>
           </ul>
           <p className="inv-lead">
-            {machineState === "VERIFIED" && "Verified! The machine is cranking — or pull the lever yourself →"}
-            {machineState === "DISPENSING" && "Dispensing your capsule…"}
-            {machineState === "DROPPED" && "A capsule dropped into the tray — tap it to crack it open!"}
+            {machineState === "VERIFIED" && `Verified! ${quantity} capsule${quantity > 1 ? "s" : ""} incoming — crank the lever →`}
+            {machineState === "DISPENSING" && `Dispensing your capsule${quantity > 1 ? "s" : ""}…`}
+            {machineState === "DROPPED" && `Your capsule${quantity > 1 ? "s" : ""} dropped — tap ${quantity > 1 ? "each one" : "it"} in the tray to pop ${quantity > 1 ? "them" : "it"} open!`}
           </p>
         </div>
       )}
 
-      {/* STATE 4 — REVEAL */}
-      {machineState === "REVEALED" && sprite && (
+      {/* STATE 4 — REVEAL (supports multi-pull bundles) */}
+      {machineState === "REVEALED" && activeSprite && (
         <div className="inv-body" data-testid="state-revealed">
-          <div className="inv-reveal-tags">
-            <span className="inv-tag" data-testid="sprite-category">{sprite.category}</span>
-            <span className="inv-tag inv-tag-alt" data-testid="sprite-palette">{sprite.paletteName}</span>
+          <div className="inv-reveal-counter" data-testid="reveal-counter">
+            Opened {openedIdx.length} / {quantity}
           </div>
-          <h3 className="inv-reveal-name" data-testid="sprite-label">{sprite.label}</h3>
+          <div className="inv-reveal-tags">
+            <span className="inv-tag" data-testid="sprite-category">{activeSprite.category}</span>
+            <span className="inv-tag inv-tag-alt" data-testid="sprite-palette">{activeSprite.paletteName}</span>
+          </div>
+          <h3 className="inv-reveal-name" data-testid="sprite-label">{activeSprite.label}</h3>
           <div className="inv-canvas-wrap">
             {/* ANTI-SCREENSHOT: watermark grid + UNMINTED text are DOM overlays only,
                 never painted onto the canvas — so the downloaded blob stays clean. */}
@@ -219,10 +253,28 @@ export const InvoicePanel = ({
               </div>
             </div>
           </div>
-          <div className="inv-seed" data-testid="sprite-seed">seed: {sprite.hash.slice(0, 24)}…</div>
+          <div className="inv-seed" data-testid="sprite-seed">seed: {activeSprite.hash.slice(0, 24)}…</div>
           <button type="button" className="inv-download" data-testid="download-sprite-button" onClick={handleDownload}>
             <Download size={18} /> Download Sprite
           </button>
+          {openedIdx.length > 0 && (
+            <div className="inv-thumbs" data-testid="opened-thumbs">
+              {openedIdx.map((i) => (
+                <SpriteThumb
+                  key={i}
+                  index={i}
+                  sprite={sprites[i]}
+                  active={i === activeIdx}
+                  onClick={() => onSelectSprite?.(i)}
+                />
+              ))}
+            </div>
+          )}
+          {openedIdx.length < quantity && (
+            <p className="inv-lead" data-testid="remaining-note">
+              {quantity - openedIdx.length} capsule{quantity - openedIdx.length > 1 ? "s" : ""} still in the tray — pop {quantity - openedIdx.length > 1 ? "them" : "it"} open!
+            </p>
+          )}
           <button type="button" className="inv-ghost" data-testid="play-again-button" onClick={onReset}>
             Insert another coin
           </button>
