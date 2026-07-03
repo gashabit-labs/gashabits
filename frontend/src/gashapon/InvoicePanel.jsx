@@ -56,14 +56,15 @@ export const InvoicePanel = ({
   openedIdx = [],
   quantity = 1,
   onInsert,
+  onQuantity,
   onSelectSprite,
   onReset,
 }) => {
   const canvasRef = useRef(null);
-  const [qty, setQty] = useState(1); // IDLE package selector (1–5 pulls)
   const activeSprite = sprites[activeIdx] || null;
   const [rate, setRate] = useState(null); // live USD ticker (CoinGecko → CryptoCompare)
   const [cryptoAmount, setCryptoAmount] = useState(null);
+  const totalUsd = (COIN_META[coin]?.priceUsd || 0.15) * (quantity || 1);
 
   // EXCHANGE API — fetch the live USD conversion ticker to price the QR invoice.
   useEffect(() => {
@@ -132,9 +133,9 @@ export const InvoicePanel = ({
               <button
                 key={n}
                 type="button"
-                className={`inv-qty-btn ${qty === n ? "is-active" : ""}`}
+                className={`inv-qty-btn ${quantity === n ? "is-active" : ""}`}
                 data-testid={`qty-${n}`}
-                onClick={() => setQty(n)}
+                onClick={() => onQuantity?.(n)}
               >
                 {n}
               </button>
@@ -144,9 +145,9 @@ export const InvoicePanel = ({
             type="button"
             className="inv-download inv-insert-btn"
             data-testid="insert-ltc-button"
-            onClick={() => onInsert("LTC", qty)}
+            onClick={() => onInsert("LTC")}
           >
-            <Coins size={18} /> Insert LTC — ${(0.15 * qty).toFixed(2)} ({qty} pull{qty > 1 ? "s" : ""})
+            <Coins size={18} /> Insert LTC — ${(0.15 * quantity).toFixed(2)} ({quantity} pull{quantity > 1 ? "s" : ""})
           </button>
           <div className="inv-privacy">
             <ShieldCheck size={14} /> Traceless session — everything flushes when you close this tab.

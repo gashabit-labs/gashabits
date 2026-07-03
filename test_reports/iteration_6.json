@@ -1,0 +1,22 @@
+{
+  "summary": "Retest of iteration_5 critical fixes for GashaBits LTC multi-pull bundles. All targeted scenarios pass: INVOICE renders for qty-4 with no ReferenceError, totalUsd is correctly scoped, qty-1..qty-5 labels compute correctly ($0.15 x N), invoice crypto amount scales exactly 4x (0.00333185 -> 0.01332741 LTC = 4.000x), cancel-invoice-button resets quantity to 1, machine cabinet renders without prize capsules in IDLE/INVOICE, no auto-advance past INVOICE, responsive layout stacks column at 390px (no horizontal scroll) and row at 1440px. No React error overlay. Only expected explorer 430 errors from Blockchair.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "totalUsd correctly declared in component scope at InvoicePanel.jsx:67 - fix verified.",
+    "App.js resetAll() correctly sets quantity=1 (line 122) - fix verified.",
+    "handleInsert no longer overwrites quantity - fix verified."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only)", "frontend": "100%"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Reveal/multi-capsule drop path (VERIFIED/DISPENSING/DROPPED/REVEALED) is NOT testable without a real on-chain LTC payment (demo/simulate button removed). All pre-payment flows (IDLE quantity, INVOICE render, QR/amount scaling, Cancel reset, responsiveness) verified working. Measured qty-1 amount=0.00333185 LTC, qty-4=0.01332741 LTC, ratio exactly 4.000x at $45.02/LTC live rate."
+}

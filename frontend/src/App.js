@@ -127,11 +127,10 @@ function App() {
     sessionStorage.removeItem(SESSION_KEY); // wipe the session cache entirely
   };
 
-  const handleInsert = (which, qty = 1) => {
+  const handleInsert = (which) => {
     setError("");
     armedRef.current = false;
     dispenseRef.current = false;
-    setQuantity(qty);
     const leased = leaseAddress(which);
     setCoin(which);
     setAddress(leased);
@@ -228,6 +227,7 @@ function App() {
             openedIdx={openedIdx}
             quantity={quantity}
             onInsert={handleInsert}
+            onQuantity={setQuantity}
             onSelectSprite={setActiveIdx}
             onReset={resetAll}
           />
