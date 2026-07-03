@@ -7,7 +7,6 @@ import {
   leaseAddress,
   pollSweep,
   validateTransaction,
-  buildSimulatedTx,
 } from "@/gashapon/blockchain";
 
 const SESSION_KEY = "gasha_session_v1";
@@ -123,12 +122,6 @@ function App() {
     addLog(`Leased ${which} address ${leased.slice(0, 10)}… from shielded pool`);
   };
 
-  // Move to processing (only reachable from INVOICE)
-  const beginProcessing = () => {
-    setMachineState("PROCESSING");
-    addLog("Broadcast window open — starting multi-explorer polling");
-  };
-
   // STATE 3 — dispense: 1.2s shake + lever rotates 180° + capsule drops into tray.
   const triggerDispense = () => {
     if (dispenseRef.current) return;
@@ -162,19 +155,6 @@ function App() {
     setError("");
     // Verification event strictly triggers the drop; the lever can also be pulled early.
     setTimeout(triggerDispense, 1000);
-  };
-
-  // DEMO simulate — from INVOICE we first flash processing, then verify.
-  const handleSimulate = () => {
-    setError("");
-    if (machineState === "INVOICE") {
-      beginProcessing();
-      const tx = buildSimulatedTx(address);
-      setTimeout(() => verifyAndArm(tx), 1600);
-    } else {
-      const tx = buildSimulatedTx(address);
-      verifyAndArm(tx);
-    }
   };
 
   // STATE 3 — the crank accepts touch + mouse; pulling early triggers the same dispense.
@@ -223,7 +203,6 @@ function App() {
             error={error}
             sprite={sprite}
             onInsert={handleInsert}
-            onSimulate={handleSimulate}
             onReset={resetAll}
           />
         </div>

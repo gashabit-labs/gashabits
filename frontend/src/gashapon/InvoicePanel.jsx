@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { Copy, Check, Download, ShieldCheck, Loader2, Bitcoin, Coins, Zap } from "lucide-react";
+import { Copy, Check, Download, ShieldCheck, Loader2, Bitcoin, Coins } from "lucide-react";
 import { drawSpriteToCanvas } from "./spriteEngine";
 import { fetchUsdRate } from "./blockchain";
 
@@ -36,7 +36,6 @@ export const InvoicePanel = ({
   error,
   sprite,
   onInsert,
-  onSimulate,
   onReset,
 }) => {
   const canvasRef = useRef(null);
@@ -159,12 +158,9 @@ export const InvoicePanel = ({
             </div>
           ) : (
             <div className="inv-live inv-live-muted" data-testid="live-listener">
-              XMR is shielded — live auto-detect isn't possible. Use the DEMO button below.
+              XMR is shielded — live auto-detect isn't possible on public explorers.
             </div>
           )}
-          <button type="button" className="inv-sim-btn" data-testid="simulate-payment-button" onClick={onSimulate}>
-            <Zap size={16} /> DEMO: Simulate Broadcast
-          </button>
           <button type="button" className="inv-ghost" data-testid="cancel-invoice-button" onClick={onReset}>
             Cancel
           </button>
@@ -183,9 +179,6 @@ export const InvoicePanel = ({
               <div key={i} className="inv-log-line">&gt; {l}</div>
             ))}
           </div>
-          <button type="button" className="inv-sim-btn" data-testid="force-verify-button" onClick={onSimulate}>
-            <Zap size={16} /> DEMO: Force Verified Broadcast
-          </button>
         </div>
       )}
 
