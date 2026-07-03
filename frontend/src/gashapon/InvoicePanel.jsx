@@ -1,8 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { Copy, Check, Download, ShieldCheck, Loader2, Coins } from "lucide-react";
+import JSZip from "jszip";
+import { Copy, Check, Download, ShieldCheck, Loader2, Coins, Package } from "lucide-react";
 import { drawSpriteToCanvas } from "./spriteEngine";
 import { fetchUsdRate } from "./blockchain";
+
+const PULL_PRICE = 0.15;
+// 5-for-4 bundle discount: five pulls cost the price of four.
+const bundlePriceUsd = (n) => (n === 5 ? 4 : n) * PULL_PRICE;
 
 const COIN_META = {
   LTC: { label: "Insert LTC", sub: "Single Turn", price: "$0.15", priceUsd: 0.15, uri: "litecoin", icon: Coins, tint: "#b8b8b8" },
@@ -38,9 +43,11 @@ const SpriteThumb = ({ sprite, active, onClick, index }) => {
       className={`inv-thumb ${active ? "is-active" : ""}`}
       data-testid={`sprite-thumb-${index}`}
       onClick={onClick}
-      title={sprite.label}
+      title={`${sprite.label} · ${sprite.rarity.name}`}
+      style={{ borderColor: sprite.rarity.color }}
     >
       <canvas ref={ref} />
+      <span className="inv-thumb-rarity" style={{ background: sprite.rarity.color }} />
     </button>
   );
 };
@@ -64,7 +71,7 @@ export const InvoicePanel = ({
   const activeSprite = sprites[activeIdx] || null;
   const [rate, setRate] = useState(null); // live USD ticker (CoinGecko → CryptoCompare)
   const [cryptoAmount, setCryptoAmount] = useState(null);
-  const totalUsd = (COIN_META[coin]?.priceUsd || 0.15) * (quantity || 1);
+  const totalUsd = bundlePriceUsd(quantity || 1);
 
   // EXCHANGE API — fetch the live USD conversion ticker to price the QR invoice.
   useEffect(() => {
@@ -78,7 +85,7 @@ export const InvoicePanel = ({
       const usd = await fetchUsdRate(coin, controller.signal); // LTC/USD
       if (controller.signal.aborted) return;
       setRate(usd);
-      const priceUsd = (COIN_META[coin]?.priceUsd || 0) * (quantity || 1);
+      const priceUsd = bundlePriceUsd(quantity || 1);
       if (usd && priceUsd) setCryptoAmount((priceUsd / usd).toFixed(8));
     })();
     return () => controller.abort(); // kill the ticker fetch on reset/unmount
@@ -108,6 +115,28 @@ export const InvoicePanel = ({
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }, "image/png");
+  };
+
+  // Zip every won sprite in the bundle into a single clean download.
+  const handleDownloadAll = async () => {
+    if (!sprites.length) return;
+    const zip = new JSZip();
+    sprites.forEach((s, i) => {
+      const c = document.createElement("canvas");
+      drawSpriteToCanvas(c, s, 16);
+      const b64 = c.toDataURL("image/png").split(",")[1];
+      const name = `${String(i + 1).padStart(2, "0")}-${s.rarity.name.toLowerCase()}-${s.category.replace(/\s+/g, "-").toLowerCase()}-${s.hash.slice(0, 8)}.png`;
+      zip.file(name, b64, { base64: true });
+    });
+    const blob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `gashabits-bundle-${sprites.length}-pulls.zip`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   return (
@@ -147,8 +176,11 @@ export const InvoicePanel = ({
             data-testid="insert-ltc-button"
             onClick={() => onInsert("LTC")}
           >
-            <Coins size={18} /> Insert LTC — ${(0.15 * quantity).toFixed(2)} ({quantity} pull{quantity > 1 ? "s" : ""})
+            <Coins size={18} /> Insert LTC — ${bundlePriceUsd(quantity).toFixed(2)} ({quantity} pull{quantity > 1 ? "s" : ""})
           </button>
+          {quantity === 5 && (
+            <div className="inv-deal" data-testid="bundle-deal">🎉 Bundle deal — 5 pulls for the price of 4!</div>
+          )}
           <div className="inv-privacy">
             <ShieldCheck size={14} /> Traceless session — everything flushes when you close this tab.
           </div>
@@ -239,11 +271,14 @@ export const InvoicePanel = ({
             Opened {openedIdx.length} / {quantity}
           </div>
           <div className="inv-reveal-tags">
+            <span className="inv-tag" data-testid="sprite-rarity" style={{ background: activeSprite.rarity.color, color: "#05020a" }}>
+              {activeSprite.rarity.name}
+            </span>
             <span className="inv-tag" data-testid="sprite-category">{activeSprite.category}</span>
             <span className="inv-tag inv-tag-alt" data-testid="sprite-palette">{activeSprite.paletteName}</span>
           </div>
           <h3 className="inv-reveal-name" data-testid="sprite-label">{activeSprite.label}</h3>
-          <div className="inv-canvas-wrap">
+          <div className="inv-canvas-wrap" style={{ borderColor: activeSprite.rarity.color, boxShadow: `0 0 28px ${activeSprite.rarity.color}` }}>
             {/* ANTI-SCREENSHOT: watermark grid + UNMINTED text are DOM overlays only,
                 never painted onto the canvas — so the downloaded blob stays clean. */}
             <div className="canvas-guard" data-testid="canvas-guard">
@@ -258,6 +293,11 @@ export const InvoicePanel = ({
           <button type="button" className="inv-download" data-testid="download-sprite-button" onClick={handleDownload}>
             <Download size={18} /> Download Sprite
           </button>
+          {sprites.length > 1 && (
+            <button type="button" className="inv-sim-btn inv-download-all" data-testid="download-all-button" onClick={handleDownloadAll}>
+              <Package size={16} /> Download All ({sprites.length}) as ZIP
+            </button>
+          )}
           {openedIdx.length > 0 && (
             <div className="inv-thumbs" data-testid="opened-thumbs">
               {openedIdx.map((i) => (

@@ -16,6 +16,19 @@ export const PALETTES = {
 };
 const PALETTE_NAMES = Object.keys(PALETTES);
 
+// --- Rarity tiers (deterministic, color-coded). `max` is the cumulative roll cap (0–100).
+export const RARITIES = [
+  { name: "Common", color: "#9ca3af", max: 50 },
+  { name: "Uncommon", color: "#4ade80", max: 75 },
+  { name: "Rare", color: "#3b82f6", max: 90 },
+  { name: "Epic", color: "#a855f7", max: 98 },
+  { name: "Legendary", color: "#ffd83d", max: 100 },
+];
+function rollRarity(clean) {
+  const roll = (parseInt(clean.slice(12, 16) || "0", 16) % 1000) / 10; // 0.0 – 99.9
+  return RARITIES.find((r) => roll < r.max) || RARITIES[0];
+}
+
 // ---------------------------------------------------------------------------
 // Grid: draws only on the LEFT half (x 0..15) then mirrors to guarantee symmetry
 // ---------------------------------------------------------------------------
@@ -258,6 +271,7 @@ export function generateSprite(hash) {
     category: category.name,
     paletteName,
     label,
+    rarity: rollRarity(clean),
     pixels: g.bake(), // flat 32x32 array of color strings or null
   };
 }

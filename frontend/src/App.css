@@ -593,6 +593,25 @@
 .inv-thumb canvas { width: 54px; height: 54px; image-rendering: pixelated; display: block; }
 .inv-thumb:hover { transform: translateY(-2px); border-color: #7ef9ff; }
 .inv-thumb.is-active { border-color: #ffde59; box-shadow: 0 0 14px rgba(255,222,89,0.6); }
+.inv-thumb { position: relative; }
+.inv-thumb-rarity {
+    position: absolute;
+    top: 3px; right: 3px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    box-shadow: 0 0 4px rgba(0,0,0,0.6);
+}
+.inv-deal {
+    text-align: center;
+    font-size: 1.05rem;
+    color: #05020a;
+    background: #ffde59;
+    border-radius: 10px;
+    padding: 8px 10px;
+    box-shadow: 0 0 16px rgba(255,222,89,0.55);
+}
+.inv-download-all { background: linear-gradient(135deg, #22d3ee, #0e7490); border-color: #a5f3fc; box-shadow: 0 5px 0 #0e5566, 0 0 18px rgba(34,211,238,0.4); }
+.inv-download-all:hover { box-shadow: 0 7px 0 #0e5566, 0 0 26px rgba(34,211,238,0.7); }
 .inv-copy {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     width: 100%;

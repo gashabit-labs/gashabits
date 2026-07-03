@@ -1,0 +1,29 @@
+{
+  "summary": "Frontend-only test of GashaBits 5-for-4 discount, bundle-deal note, invoice totals, cancel reset, cabinet render, responsiveness, and console cleanliness. All testable items PASS.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results": {
+    "qty_labels": "PASS - qty1=$0.15(1 pull), qty2=$0.30(2), qty3=$0.45(3), qty4=$0.60(4), qty5=$0.60(5 pulls)",
+    "bundle_deal_note": "PASS - visible only at qty=5 with text '🎉 Bundle deal — 5 pulls for the price of 4!'; absent for qty 1-4",
+    "invoice_totals": "PASS - qty5 lead has $0.60 and '5 pulls'; qty3 lead has $0.45 and '3 pulls'",
+    "invoice_amount_scaling": "PASS - LTC amounts: qty1=0.00333927, qty3=0.01001781 (~3x), qty4=0.01335708, qty5=0.01335708 (equal, ~4x qty1)",
+    "cancel_reset": "PASS - returns to IDLE, label reset to '$0.15 (1 pull)', bundle-deal removed",
+    "cabinet_render": "PASS - gashapon-cabinet, machine-globe, machine-lever, machine-prize-slot present; no prize-capsules in IDLE",
+    "responsive_mobile_390": "PASS - no horizontal scroll (scrollWidth=clientWidth=390); qty buttons + deal note visible",
+    "console_errors": "PASS - 0 app-level JS errors/warnings across all interactions",
+    "reveal_only_items": "NOT TESTABLE - rarity badges, colored glow, download-all ZIP require real LTC payment (as documented in review request)"
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "5-for-4 bundle discount is fully implemented and verified. qty=5 costs exactly the same as qty=4 in USD and computed LTC amount. Rarity UI and ZIP download live on unreachable REVEALED state (requires real on-chain LTC), cannot be exercised in preview."
+}
