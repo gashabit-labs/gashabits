@@ -1,0 +1,30 @@
+{
+  "summary": "Verified the duplicate-sprite / cached-hash bug fix and reset teardown end-to-end via Playwright. All 7 required scenarios PASS: happy path, no-auto-confirm after Play Again, unique LTC seeds across turns, sessionStorage wiped on IDLE, fresh listener on re-insert (no ghost), XMR path unchanged with unique seeds, no JS/console exceptions.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "verified_behavior": {
+    "regression_happy_path_ltc": "PASS — insert-ltc-button -> INVOICE -> simulate-payment-button -> PROCESSING -> VERIFIED -> capsule drops -> tap prize-capsule -> REVEALED with sprite-canvas/sprite-label/download-sprite-button.",
+    "no_free_duplicate": "PASS — after play-again-button + re-insert-ltc, app remains in INVOICE state for 3s wait; sprite-canvas and prize-capsule NOT visible; no auto VERIFIED/DISPENSING/DROPPED/REVEALED.",
+    "uniqueness_ltc": "PASS — turn1 seed 'ffb6721a005d43fb4936d72e...' != turn2 seed 'b604b5dd5943c647922633c0...'.",
+    "sessionstorage_wipe": "PASS — sessionStorage.getItem('gasha_session_v1') is null immediately after play-again-button on IDLE; PRESENT during active REVEALED state (as expected).",
+    "abort_no_ghost": "PASS — fresh live-log lines appear after re-insert ('Polling Blockchair', 'litecoinspace: no 0-conf incoming yet'); exactly 1 prize-capsule element per turn (no double dispense); no stale confirmation fires.",
+    "xmr_path": "PASS — insert-xmr-button shows shielded message in live-listener; no live-log DOM element rendered; simulate-payment-button drives full reveal; XMR turn1 seed 'aadccac86a98cdc8fb0ed93c...' != turn2 'dfa99ce24d477417dc308380...'.",
+    "no_js_exceptions": "PASS — 11 console entries total, 0 real JS/React exceptions (only expected Blockchair 430 / litecoinspace network warnings and AbortError from intentional controller.abort())."
+  },
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Bug fix implementation looks correct: consumedRef Set burns hashes on redemption and rejects them in both live-poller and verifyAndArm; abortRef.abort() called in resetAll AND on verify; sessionStorage.removeItem in resetAll + persist-effect when IDLE; buildSimulatedTx returns unique 64-hex hash each call (verified via distinct sprite-seed).",
+    "Minor: consumedRef persists only in memory (Set). On tab reload, if a hash restored from sessionStorage were valid it could theoretically re-arm — but since sessionStorage is now wiped on IDLE, the surface is limited to mid-session reloads which is acceptable per the traceless design."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only test)", "frontend": "100%"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Bug fix for duplicate-sprite/cached-hash fully verified via Playwright on public URL. Test flow: insert-ltc-button -> state-invoice -> simulate-payment-button -> wait for prize-capsule -> click prize-capsule (force=True, 600ms settle) -> state-revealed -> read sprite-seed. To trigger reset use play-again-button then check sessionStorage.getItem('gasha_session_v1') === null. Both LTC and XMR paths use the same simulate flow; only difference is XMR omits the live-log element and shows shielded copy in live-listener."
+}

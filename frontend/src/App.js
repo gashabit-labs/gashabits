@@ -35,12 +35,19 @@ function App() {
   const pollRef = useRef(null);
   const dispenseRef = useRef(false);
   const armedRef = useRef(false);
+  const consumedRef = useRef(new Set()); // tx hashes already redeemed this session
+  const abortRef = useRef(null);         // kills in-flight explorer fetches on reset
   const addLog = useCallback((line) => {
     setLogs((prev) => [...prev.slice(-8), `${new Date().toLocaleTimeString()} — ${line}`]);
   }, []);
 
   // TRACELESS EXIT — persist only to sessionStorage; tab close flushes memory.
   useEffect(() => {
+    if (machineState === "IDLE") {
+      // Fresh/idle session holds no transaction — keep the cache fully wiped.
+      sessionStorage.removeItem(SESSION_KEY);
+      return;
+    }
     const snapshot = { machineState, coin, address, hash: sprite?.hash || null };
     try {
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(snapshot));
@@ -60,11 +67,18 @@ function App() {
     const live = (machineState === "INVOICE" || machineState === "PROCESSING") && coin === "LTC";
     if (!live || !address) return;
     let cancelled = false;
+    const controller = new AbortController();
+    abortRef.current = controller;
     addLog("Listening to live LTC mempool (5s interval)…");
     const sweep = async () => {
-      const result = await pollSweep(address, coin, addLog);
-      if (cancelled || !result) return;
+      const result = await pollSweep(address, coin, addLog, controller.signal);
+      if (cancelled || controller.signal.aborted || !result) return;
       if (result.found) {
+        // STRICT UNIQUENESS: never redeem a hash that was already consumed.
+        if (consumedRef.current.has(result.tx.hash)) {
+          addLog(`Ignoring already-redeemed tx ${result.tx.hash.slice(0, 12)}… — awaiting a fresh broadcast.`);
+          return;
+        }
         const check = validateTransaction(result.tx, address);
         if (check.ok) {
           verifyAndArm(result.tx);
@@ -77,6 +91,7 @@ function App() {
     pollRef.current = setInterval(sweep, 5000);
     return () => {
       cancelled = true;
+      controller.abort(); // explicitly kill any in-flight fetch on state change/reset
       stopPolling();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -84,15 +99,17 @@ function App() {
 
   const resetAll = () => {
     stopPolling();
+    abortRef.current?.abort(); // kill active async fetch routines
+    abortRef.current = null;
     dispenseRef.current = false;
     armedRef.current = false;
     setMachineState("IDLE");
     setCoin(null);
     setAddress(null);
-    setSprite(null);
+    setSprite(null);   // clears the cached tx hash from memory
     setLogs([]);
     setError("");
-    sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(SESSION_KEY); // wipe the session cache entirely
   };
 
   const handleInsert = (which) => {
@@ -123,6 +140,11 @@ function App() {
   // ANTI-CHEAT gatekeeper passed → seed engine (result stays HIDDEN) then dispense.
   const verifyAndArm = (tx) => {
     if (armedRef.current) return; // ignore duplicate live/simulate triggers
+    // STRICT UNIQUENESS: a hash redeemed earlier this session can never pay again.
+    if (consumedRef.current.has(tx.hash)) {
+      addLog(`Duplicate tx ${tx.hash.slice(0, 12)}… rejected — a unique broadcast is required.`);
+      return;
+    }
     const check = validateTransaction(tx, address);
     if (!check.ok) {
       setError(check.message);
@@ -130,7 +152,9 @@ function App() {
       return;
     }
     armedRef.current = true;
+    consumedRef.current.add(tx.hash); // burn this hash so it can never redeem again
     stopPolling();
+    abortRef.current?.abort();
     dispenseRef.current = false;
     addLog(`VERIFIED ${tx.hash.slice(0, 16)}… — seeding art engine`);
     setSprite(generateSprite(tx.hash)); // generated but hidden until the capsule is opened

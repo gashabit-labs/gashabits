@@ -50,15 +50,15 @@ export const InvoicePanel = ({
       setCryptoAmount(null);
       return;
     }
-    let cancelled = false;
+    const controller = new AbortController();
     (async () => {
-      const usd = await fetchUsdRate(coin); // LTC/USD or XMR/USD
-      if (cancelled) return;
+      const usd = await fetchUsdRate(coin, controller.signal); // LTC/USD or XMR/USD
+      if (controller.signal.aborted) return;
       setRate(usd);
       const priceUsd = COIN_META[coin]?.priceUsd;
       if (usd && priceUsd) setCryptoAmount((priceUsd / usd).toFixed(8));
     })();
-    return () => { cancelled = true; };
+    return () => controller.abort(); // kill the ticker fetch on reset/unmount
   }, [machineState, coin]);
 
   const qrValue = `${COIN_META[coin]?.uri}:${address}${cryptoAmount ? `?amount=${cryptoAmount}` : ""}`;

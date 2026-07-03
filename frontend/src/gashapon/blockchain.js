@@ -29,9 +29,9 @@ export function leaseAddress(coin) {
 // mempool.space-compatible LTC instance (litecoinspace.org) as the failover.
 
 // --- Explorer #1: Blockchair (Litecoin) with raw-tx cross-verification.
-async function detectViaBlockchair(address, onLog) {
+async function detectViaBlockchair(address, onLog, signal) {
   const base = "https://api.blockchair.com/litecoin";
-  const r = await fetch(`${base}/dashboards/address/${address}?limit=5`);
+  const r = await fetch(`${base}/dashboards/address/${address}?limit=5`, { signal });
   if (r.status === 429) { onLog?.("Blockchair rate-limited (429) → failover"); return { retry: true }; }
   if (!r.ok) { onLog?.(`Blockchair responded ${r.status} → failover`); return { retry: true }; }
   const d = await r.json().catch(() => null);
@@ -40,7 +40,7 @@ async function detectViaBlockchair(address, onLog) {
   if (!hash) { onLog?.("Blockchair: no incoming tx yet"); return { found: false }; }
 
   // Cross-verify raw transaction details (confirmations / time / outputs).
-  const tr = await fetch(`${base}/dashboards/transaction/${hash}`);
+  const tr = await fetch(`${base}/dashboards/transaction/${hash}`, { signal });
   if (tr.status === 429) { onLog?.("Blockchair(tx) 429 → failover"); return { retry: true }; }
   if (!tr.ok) { onLog?.(`Blockchair(tx) ${tr.status} → failover`); return { retry: true }; }
   const td = await tr.json().catch(() => null);
@@ -59,9 +59,9 @@ async function detectViaBlockchair(address, onLog) {
 }
 
 // --- Explorer #2 (failover): mempool.space-style LTC API (litecoinspace.org).
-async function detectViaLitecoinspace(address, onLog) {
+async function detectViaLitecoinspace(address, onLog, signal) {
   const base = "https://litecoinspace.org/api";
-  const r = await fetch(`${base}/address/${address}/txs/mempool`);
+  const r = await fetch(`${base}/address/${address}/txs/mempool`, { signal });
   if (r.status === 429) { onLog?.("litecoinspace rate-limited (429) → failover"); return { retry: true }; }
   if (!r.ok) { onLog?.(`litecoinspace responded ${r.status} → failover`); return { retry: true }; }
   const txs = await r.json().catch(() => []);
@@ -84,7 +84,9 @@ const LTC_EXPLORERS = [
 ];
 
 // Attempt one polling sweep with failover. Returns { found, tx, explorer } or null.
-export async function pollSweep(address, coin, onLog) {
+// An optional AbortSignal lets the caller explicitly kill in-flight fetches.
+export async function pollSweep(address, coin, onLog, signal) {
+  if (signal?.aborted) return null;
   if (coin !== "LTC") {
     // Monero is a shielded/private chain — public explorers can't reliably map a
     // mempool payment to a single address, so live auto-detect is LTC-only.
@@ -92,9 +94,10 @@ export async function pollSweep(address, coin, onLog) {
     return { found: false, explorer: "none" };
   }
   for (const ex of LTC_EXPLORERS) {
+    if (signal?.aborted) return null;
     try {
       onLog?.(`Polling ${ex.name}…`);
-      const res = await ex.detect(address, onLog);
+      const res = await ex.detect(address, onLog, signal);
       if (res?.retry) continue; // 429 / error → failover to next explorer
       if (res?.found) {
         onLog?.(`${ex.name}: 0-conf incoming tx ${res.tx.hash.slice(0, 12)}… detected`);
@@ -102,6 +105,7 @@ export async function pollSweep(address, coin, onLog) {
       }
       return { found: false, explorer: ex.name }; // explorer worked, nothing yet
     } catch (e) {
+      if (e?.name === "AbortError" || signal?.aborted) return null; // fetch was killed
       onLog?.(`${ex.name} unreachable → failover`);
       continue;
     }
@@ -152,11 +156,11 @@ export function buildSimulatedTx(leasedAddress) {
 }
 
 // EXCHANGE API — live USD conversion ticker (CoinGecko primary, CryptoCompare fallback)
-export async function fetchUsdRate(coin) {
+export async function fetchUsdRate(coin, signal) {
   const id = coin === "XMR" ? "monero" : "litecoin";
   const sym = coin === "XMR" ? "XMR" : "LTC";
   try {
-    const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`);
+    const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`, { signal });
     if (r.ok) {
       const d = await r.json();
       const v = d?.[id]?.usd;
@@ -164,7 +168,7 @@ export async function fetchUsdRate(coin) {
     }
   } catch { /* fall through to backup ticker */ }
   try {
-    const r = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${sym}&tsyms=USD`);
+    const r = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${sym}&tsyms=USD`, { signal });
     if (r.ok) {
       const d = await r.json();
       if (d?.USD) return d.USD;
