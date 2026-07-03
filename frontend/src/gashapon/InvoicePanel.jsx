@@ -1,12 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { Copy, Check, Download, ShieldCheck, Loader2, Bitcoin, Coins } from "lucide-react";
+import { Copy, Check, Download, ShieldCheck, Loader2, Coins } from "lucide-react";
 import { drawSpriteToCanvas } from "./spriteEngine";
 import { fetchUsdRate } from "./blockchain";
 
 const COIN_META = {
   LTC: { label: "Insert LTC", sub: "Single Turn", price: "$0.15", priceUsd: 0.15, uri: "litecoin", icon: Coins, tint: "#b8b8b8" },
-  XMR: { label: "Insert XMR", sub: "Multi-Token Roll", price: "$1.50", priceUsd: 1.5, uri: "monero", icon: Bitcoin, tint: "#ff7b00" },
 };
 
 const CopyRow = ({ value }) => {
