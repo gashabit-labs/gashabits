@@ -20,74 +20,93 @@ export function leaseAddress(coin) {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-// MULTI-API FAILOVER NETWORKS — public, unauthenticated explorers.
-// Each explorer attempts to fetch txs for the leased address. On 429/error
-// the loop instantly falls back to the next explorer.
-const EXPLORERS = [
-  {
-    name: "Blockchair",
-    build: (addr, coin) =>
-      `https://api.blockchair.com/${coin === "XMR" ? "monero" : "litecoin"}/dashboards/address/${addr}`,
-  },
-  {
-    name: "Blockstream",
-    build: (addr) => `https://blockstream.info/api/address/${addr}/txs`,
-  },
+// MULTI-API FAILOVER NETWORKS — public, unauthenticated LTC explorers.
+// Genuine live detection scans the address for a 0-confirmation (mempool)
+// incoming transaction. Each explorer normalises to a common tx shape and the
+// raw tx is cross-verified before the anti-cheat gates run.
+//
+// NOTE: Blockstream's API is Bitcoin-only, so for Litecoin we use the
+// mempool.space-compatible LTC instance (litecoinspace.org) as the failover.
+
+// --- Explorer #1: Blockchair (Litecoin) with raw-tx cross-verification.
+async function detectViaBlockchair(address, onLog) {
+  const base = "https://api.blockchair.com/litecoin";
+  const r = await fetch(`${base}/dashboards/address/${address}?limit=5`);
+  if (r.status === 429) { onLog?.("Blockchair rate-limited (429) → failover"); return { retry: true }; }
+  if (!r.ok) { onLog?.(`Blockchair responded ${r.status} → failover`); return { retry: true }; }
+  const d = await r.json().catch(() => null);
+  const info = d?.data?.[address];
+  const hash = info?.transactions?.[0];
+  if (!hash) { onLog?.("Blockchair: no incoming tx yet"); return { found: false }; }
+
+  // Cross-verify raw transaction details (confirmations / time / outputs).
+  const tr = await fetch(`${base}/dashboards/transaction/${hash}`);
+  if (tr.status === 429) { onLog?.("Blockchair(tx) 429 → failover"); return { retry: true }; }
+  if (!tr.ok) { onLog?.(`Blockchair(tx) ${tr.status} → failover`); return { retry: true }; }
+  const td = await tr.json().catch(() => null);
+  const t = td?.data?.[hash]?.transaction;
+  const outs = td?.data?.[hash]?.outputs || [];
+  if (!t) return { found: false };
+  return {
+    found: true,
+    tx: {
+      hash,
+      confirmations: t.block_id && t.block_id > 0 ? 1 : 0,
+      time: t.time ? Math.floor(new Date(`${t.time}Z`).getTime() / 1000) : Math.floor(Date.now() / 1000),
+      outputs: outs.map((o) => o.recipient).filter(Boolean),
+    },
+  };
+}
+
+// --- Explorer #2 (failover): mempool.space-style LTC API (litecoinspace.org).
+async function detectViaLitecoinspace(address, onLog) {
+  const base = "https://litecoinspace.org/api";
+  const r = await fetch(`${base}/address/${address}/txs/mempool`);
+  if (r.status === 429) { onLog?.("litecoinspace rate-limited (429) → failover"); return { retry: true }; }
+  if (!r.ok) { onLog?.(`litecoinspace responded ${r.status} → failover`); return { retry: true }; }
+  const txs = await r.json().catch(() => []);
+  const incoming = (txs || []).find((t) => (t.vout || []).some((o) => o.scriptpubkey_address === address));
+  if (!incoming) { onLog?.("litecoinspace: no 0-conf incoming yet"); return { found: false }; }
+  return {
+    found: true,
+    tx: {
+      hash: incoming.txid,
+      confirmations: incoming.status?.confirmed ? 1 : 0,
+      time: Math.floor(Date.now() / 1000), // mempool first-seen ≈ now
+      outputs: (incoming.vout || []).map((o) => o.scriptpubkey_address).filter(Boolean),
+    },
+  };
+}
+
+const LTC_EXPLORERS = [
+  { name: "Blockchair", detect: detectViaBlockchair },
+  { name: "litecoinspace", detect: detectViaLitecoinspace },
 ];
 
 // Attempt one polling sweep with failover. Returns { found, tx, explorer } or null.
 export async function pollSweep(address, coin, onLog) {
-  for (const ex of EXPLORERS) {
+  if (coin !== "LTC") {
+    // Monero is a shielded/private chain — public explorers can't reliably map a
+    // mempool payment to a single address, so live auto-detect is LTC-only.
+    onLog?.("XMR is shielded — live auto-detect unavailable; use Simulate Broadcast.");
+    return { found: false, explorer: "none" };
+  }
+  for (const ex of LTC_EXPLORERS) {
     try {
       onLog?.(`Polling ${ex.name}…`);
-      const res = await fetch(ex.build(address, coin), { method: "GET" });
-      if (res.status === 429) {
-        onLog?.(`${ex.name} rate-limited (429) → failover`);
-        continue;
+      const res = await ex.detect(address, onLog);
+      if (res?.retry) continue; // 429 / error → failover to next explorer
+      if (res?.found) {
+        onLog?.(`${ex.name}: 0-conf incoming tx ${res.tx.hash.slice(0, 12)}… detected`);
+        return { found: true, tx: res.tx, explorer: ex.name };
       }
-      if (!res.ok) {
-        onLog?.(`${ex.name} responded ${res.status} → failover`);
-        continue;
-      }
-      const data = await res.json().catch(() => null);
-      const tx = extractTx(ex.name, data, address);
-      if (tx) {
-        onLog?.(`${ex.name}: mempool tx detected`);
-        return { found: true, tx, explorer: ex.name };
-      }
-      onLog?.(`${ex.name}: no matching tx yet`);
-      return { found: false, explorer: ex.name };
+      return { found: false, explorer: ex.name }; // explorer worked, nothing yet
     } catch (e) {
       onLog?.(`${ex.name} unreachable → failover`);
       continue;
     }
   }
   onLog?.("All explorers exhausted this cycle.");
-  return null;
-}
-
-// Normalise the various explorer payloads into a common tx shape.
-function extractTx(name, data, address) {
-  if (!data) return null;
-  try {
-    if (name === "Blockstream" && Array.isArray(data) && data.length) {
-      const t = data[0];
-      return {
-        hash: t.txid,
-        confirmations: t.status?.confirmed ? 1 : 0,
-        time: t.status?.block_time || Math.floor(Date.now() / 1000),
-        outputs: (t.vout || []).map((o) => o.scriptpubkey_address).filter(Boolean),
-      };
-    }
-    if (name === "Blockchair" && data.data && data.data[address]) {
-      const d = data.data[address];
-      const txid = (d.transactions || [])[0];
-      if (!txid) return null;
-      return { hash: txid, confirmations: 0, time: Math.floor(Date.now() / 1000), outputs: [address] };
-    }
-  } catch (e) {
-    return null;
-  }
   return null;
 }
 

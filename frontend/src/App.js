@@ -34,6 +34,7 @@ function App() {
 
   const pollRef = useRef(null);
   const dispenseRef = useRef(false);
+  const armedRef = useRef(false);
   const addLog = useCallback((line) => {
     setLogs((prev) => [...prev.slice(-8), `${new Date().toLocaleTimeString()} — ${line}`]);
   }, []);
@@ -53,10 +54,13 @@ function App() {
     }
   }, []);
 
-  // MULTI-API FAILOVER POLLING while awaiting broadcast.
+  // LIVE MEMPOOL POLLING — the primary trigger. As soon as the LTC invoice is
+  // shown we poll the failover explorer pool every 5s for a 0-conf incoming tx.
   useEffect(() => {
-    if (machineState !== "PROCESSING" || !address) return;
+    const live = (machineState === "INVOICE" || machineState === "PROCESSING") && coin === "LTC";
+    if (!live || !address) return;
     let cancelled = false;
+    addLog("Listening to live LTC mempool (5s interval)…");
     const sweep = async () => {
       const result = await pollSweep(address, coin, addLog);
       if (cancelled || !result) return;
@@ -70,7 +74,7 @@ function App() {
       }
     };
     sweep();
-    pollRef.current = setInterval(sweep, 6000);
+    pollRef.current = setInterval(sweep, 5000);
     return () => {
       cancelled = true;
       stopPolling();
@@ -81,6 +85,7 @@ function App() {
   const resetAll = () => {
     stopPolling();
     dispenseRef.current = false;
+    armedRef.current = false;
     setMachineState("IDLE");
     setCoin(null);
     setAddress(null);
@@ -92,6 +97,8 @@ function App() {
 
   const handleInsert = (which) => {
     setError("");
+    armedRef.current = false;
+    dispenseRef.current = false;
     const leased = leaseAddress(which);
     setCoin(which);
     setAddress(leased);
@@ -115,12 +122,14 @@ function App() {
 
   // ANTI-CHEAT gatekeeper passed → seed engine (result stays HIDDEN) then dispense.
   const verifyAndArm = (tx) => {
+    if (armedRef.current) return; // ignore duplicate live/simulate triggers
     const check = validateTransaction(tx, address);
     if (!check.ok) {
       setError(check.message);
       addLog(check.message);
       return;
     }
+    armedRef.current = true;
     stopPolling();
     dispenseRef.current = false;
     addLog(`VERIFIED ${tx.hash.slice(0, 16)}… — seeding art engine`);

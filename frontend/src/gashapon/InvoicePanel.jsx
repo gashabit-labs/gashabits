@@ -148,6 +148,20 @@ export const InvoicePanel = ({
           </div>
           <span className="inv-field-label">Leased {coin} address</span>
           <CopyRow value={address} />
+          {coin === "LTC" ? (
+            <div className="inv-live" data-testid="live-listener">
+              <span className="inv-live-dot" /> LIVE — scanning the LTC mempool every 5s for your payment
+              <div className="inv-log inv-log-mini" data-testid="live-log">
+                {logs.slice(-4).map((l, i) => (
+                  <div key={i} className="inv-log-line">&gt; {l}</div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="inv-live inv-live-muted" data-testid="live-listener">
+              XMR is shielded — live auto-detect isn't possible. Use the DEMO button below.
+            </div>
+          )}
           <button type="button" className="inv-sim-btn" data-testid="simulate-payment-button" onClick={onSimulate}>
             <Zap size={16} /> DEMO: Simulate Broadcast
           </button>
